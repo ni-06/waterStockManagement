@@ -1,7 +1,4 @@
 #include <stdio.h>
-int main() 
-{
-    printf("Hello, World!");
-    printf("How are youu!");
-    return 0;
-}
+
+#define MAX_ZONES 6
+#define MAX_NAME 30
