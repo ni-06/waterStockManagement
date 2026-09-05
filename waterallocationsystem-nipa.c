@@ -1,589 +1,435 @@
 #include <stdio.h>
 
-#define MAX_ZONES 6
-#define MAX_NAME 30
+#define ZONES 6
 
-int main() {
-    // Using 2D arrays to store zone data
-    // Row indices: 0=Z01, 1=Z02, 2=Z03, 3=Z04, 4=Z05, 5=Z06
-    char zoneID[MAX_ZONES][4] = {"Z01", "Z02", "Z03", "Z04", "Z05", "Z06"};
-    char serviceType[MAX_ZONES][30] = {
-        "Municipal Hospital",
-        "Central Flood Shelter",
-        "Ward 3 Residential",
-        "Ward 5 Residential",
-        "School Emergency Shelter",
-        "Fire and Emergency Service"
-    };
-    int requested[MAX_ZONES] = {4000, 3500, 4500, 3800, 2600, 2000};
-    int minimum[MAX_ZONES] = {3000, 2500, 2000, 1800, 1600, 1500};
-    int lossPercent[MAX_ZONES] = {20, 4, 8, 12, 5, 1};
-    int waitingCycles[MAX_ZONES] = {2, 1, 2, 3, 1, 0};
-    int priority[MAX_ZONES] = {0, 0, 0, 0, 0, 0};
-    int allocated[MAX_ZONES] = {0, 0, 0, 0, 0, 0};
-    int effectiveDelivered[MAX_ZONES] = {0, 0, 0, 0, 0, 0};
-    int shortage[MAX_ZONES] = {0, 0, 0, 0, 0, 0};
-    char serviceCondition[MAX_ZONES][25] = {"", "", "", "", "", ""};
+int main()
+{
+    // Data: ID, Type, Requested, Minimum, Loss%, Waiting
+    // Type: 1=Hospital, 2=Shelter, 3=Residential, 4=Emergency
+    int id[ZONES] = {1, 2, 3, 4, 5, 6};
+    int type[ZONES] = {1, 2, 3, 3, 2, 4};
+    int req[ZONES] = {4000, 3500, 4500, 3800, 2600, 2000};
+    int minReq[ZONES] = {3000, 2500, 2000, 1800, 1600, 1500};
+    int loss[ZONES] = {2, 4, 8, 12, 5, 1};
+    int wait[ZONES] = {0, 1, 2, 3, 1, 0};
     
-    int availableWater = 13500;
-    int choice;
-    int i, j, temp;
-    int tempArray[MAX_ZONES];
-    char tempStr[30];
+    int allocated[ZONES] = {0, 0, 0, 0, 0, 0};
+    int effective[ZONES] = {0, 0, 0, 0, 0, 0};
+    int shortage[ZONES] = {0, 0, 0, 0, 0, 0};
+    int status[ZONES] = {0, 0, 0, 0, 0, 0};
+    int priority[ZONES] = {0, 0, 0, 0, 0, 0};
     
-    do {
-        printf("\n========== WATER ALLOCATION SYSTEM ==========\n");
-        printf("1. Calculate Priority & Allocate Water\n");
-        printf("2. Search Zone Information\n");
-        printf("3. Sort Zones by Service Condition\n");
-        printf("4. Find Zone with Highest Shortage\n");
-        printf("5. Display Complete Summary\n");
-        printf("6. Test with Different Water Amounts\n");
-        printf("7. Exit\n");
-        printf("Enter your choice: ");
+    int available = 13500;
+    int choice, i, j, temp, code, found;
+    int totalReq, totalMin;
+    
+    do
+    {
+        printf("\n\n");
+        printf("1. Show Zone List\n");
+        printf("2. Run Allocation\n");
+        printf("3. Show Results\n");
+        printf("4. Search Zone\n");
+        printf("5. Change Water Amount\n");
+        printf("6. Exit\n");
+        printf("Enter choice: ");
         scanf("%d", &choice);
         
-        switch(choice) {
-            case 1:
-                printf("\nEnter available water (litres): ");
-                scanf("%d", &availableWater);
-                // Reset allocated values
-                for(i = 0; i < MAX_ZONES; i++) {
-                    allocated[i] = 0;
-                    effectiveDelivered[i] = 0;
-                    shortage[i] = 0;
-                }
-                // Calculate priority and allocate
-                calculatePriority(zoneID, serviceType, requested, minimum, 
-                                lossPercent, waitingCycles, priority, availableWater);
-                allocateWater(zoneID, serviceType, requested, minimum, 
-                            lossPercent, waitingCycles, priority, allocated, 
-                            effectiveDelivered, shortage, serviceCondition, &availableWater);
-                displaySummary(zoneID, serviceType, requested, minimum, priority, 
-                             allocated, effectiveDelivered, shortage, serviceCondition, availableWater);
-                break;
-                
-            case 2:
-                searchZone(zoneID, serviceType, requested, minimum, 
-                          lossPercent, waitingCycles, priority, allocated, 
-                          effectiveDelivered, shortage, serviceCondition);
-                break;
-                
-            case 3:
-                sortByServiceCondition(zoneID, serviceType, requested, minimum, 
-                                      priority, allocated, effectiveDelivered, 
-                                      shortage, serviceCondition);
-                break;
-                
-            case 4:
-                findHighestShortage(zoneID, serviceType, shortage, serviceCondition);
-                break;
-                
-            case 5:
-                displaySummary(zoneID, serviceType, requested, minimum, priority, 
-                             allocated, effectiveDelivered, shortage, serviceCondition, availableWater);
-                break;
-                
-            case 6:
-                printf("\n--- TEST CASES ---\n");
-                printf("\nCase 1: Original - 13,500 litres\n");
-                availableWater = 13500;
-                for(i = 0; i < MAX_ZONES; i++) {
-                    allocated[i] = 0;
-                    effectiveDelivered[i] = 0;
-                    shortage[i] = 0;
-                }
-                calculatePriority(zoneID, serviceType, requested, minimum, 
-                                lossPercent, waitingCycles, priority, availableWater);
-                allocateWater(zoneID, serviceType, requested, minimum, 
-                            lossPercent, waitingCycles, priority, allocated, 
-                            effectiveDelivered, shortage, serviceCondition, &availableWater);
-                displaySummary(zoneID, serviceType, requested, minimum, priority, 
-                             allocated, effectiveDelivered, shortage, serviceCondition, availableWater);
-                
-                printf("\nCase 2: Sufficient - 25,000 litres\n");
-                availableWater = 25000;
-                for(i = 0; i < MAX_ZONES; i++) {
-                    allocated[i] = 0;
-                    effectiveDelivered[i] = 0;
-                    shortage[i] = 0;
-                }
-                calculatePriority(zoneID, serviceType, requested, minimum, 
-                                lossPercent, waitingCycles, priority, availableWater);
-                allocateWater(zoneID, serviceType, requested, minimum, 
-                            lossPercent, waitingCycles, priority, allocated, 
-                            effectiveDelivered, shortage, serviceCondition, &availableWater);
-                displaySummary(zoneID, serviceType, requested, minimum, priority, 
-                             allocated, effectiveDelivered, shortage, serviceCondition, availableWater);
-                
-                printf("\nCase 3: Below Minimum - 8,000 litres\n");
-                availableWater = 8000;
-                for(i = 0; i < MAX_ZONES; i++) {
-                    allocated[i] = 0;
-                    effectiveDelivered[i] = 0;
-                    shortage[i] = 0;
-                }
-                calculatePriority(zoneID, serviceType, requested, minimum, 
-                                lossPercent, waitingCycles, priority, availableWater);
-                allocateWater(zoneID, serviceType, requested, minimum, 
-                            lossPercent, waitingCycles, priority, allocated, 
-                            effectiveDelivered, shortage, serviceCondition, &availableWater);
-                displaySummary(zoneID, serviceType, requested, minimum, priority, 
-                             allocated, effectiveDelivered, shortage, serviceCondition, availableWater);
-                break;
-                
-            case 7:
-                printf("Exiting program...\n");
-                break;
-                
-            default:
-                printf("Invalid choice! Please try again.\n");
+        if(choice == 1)
+        {
+            printf("\nZONE LIST:\n");
+            printf("Z01 - Municipal Hospital\n");
+            printf("Z02 - Central Flood Shelter\n");
+            printf("Z03 - Ward 3 Residential\n");
+            printf("Z04 - Ward 5 Residential\n");
+            printf("Z05 - School Emergency Shelter\n");
+            printf("Z06 - Fire and Emergency Service\n");
         }
-    } while(choice != 7);
+        
+        else if(choice == 2)
+        {
+            // Calculate totals
+            totalReq = 0;
+            totalMin = 0;
+            for(i = 0; i < ZONES; i++)
+            {
+                totalReq = totalReq + req[i];
+                totalMin = totalMin + minReq[i];
+            }
+            
+            printf("\nAvailable Water: %d litres\n", available);
+            printf("Total Requested: %d litres\n", totalReq);
+            printf("Total Minimum Required: %d litres\n\n", totalMin);
+            
+            // CASE 1: Enough for all
+            if(available >= totalReq)
+            {
+                printf("Enough water for all requests!\n");
+                for(i = 0; i < ZONES; i++)
+                {
+                    allocated[i] = req[i];
+                    effective[i] = allocated[i] - (allocated[i] * loss[i] / 100);
+                    shortage[i] = req[i] - effective[i];
+                    status[i] = 1;  // Full
+                }
+                available = available - totalReq;
+            }
+            
+            // CASE 2: Enough for minimum only
+            else if(available >= totalMin)
+            {
+                printf("Enough for minimum requirements.\n");
+                printf("Giving minimum to all zones first...\n");
+                
+                // Give minimum to all
+                for(i = 0; i < ZONES; i++)
+                {
+                    allocated[i] = minReq[i];
+                    effective[i] = allocated[i] - (allocated[i] * loss[i] / 100);
+                    shortage[i] = req[i] - effective[i];
+                    status[i] = 2;  // Minimum only
+                }
+                
+                available = available - totalMin;
+                
+                // Calculate priority scores
+                for(i = 0; i < ZONES; i++)
+                {
+                    priority[i] = 0;
+                    
+                    if(type[i] == 1 || type[i] == 4)
+                        priority[i] = priority[i] + 50;
+                    else if(type[i] == 2)
+                        priority[i] = priority[i] + 30;
+                    else
+                        priority[i] = priority[i] + 10;
+                    
+                    priority[i] = priority[i] + (wait[i] * 5);
+                    priority[i] = priority[i] + ((req[i] - minReq[i]) / 100);
+                }
+                
+                // Sort by priority (highest first)
+                for(i = 0; i < ZONES - 1; i++)
+                {
+                    for(j = i + 1; j < ZONES; j++)
+                    {
+                        if(priority[j] > priority[i])
+                        {
+                            temp = priority[i];
+                            priority[i] = priority[j];
+                            priority[j] = temp;
+                            
+                            temp = id[i];
+                            id[i] = id[j];
+                            id[j] = temp;
+                            
+                            temp = type[i];
+                            type[i] = type[j];
+                            type[j] = temp;
+                            
+                            temp = req[i];
+                            req[i] = req[j];
+                            req[j] = temp;
+                            
+                            temp = minReq[i];
+                            minReq[i] = minReq[j];
+                            minReq[j] = temp;
+                            
+                            temp = loss[i];
+                            loss[i] = loss[j];
+                            loss[j] = temp;
+                            
+                            temp = wait[i];
+                            wait[i] = wait[j];
+                            wait[j] = temp;
+                            
+                            temp = allocated[i];
+                            allocated[i] = allocated[j];
+                            allocated[j] = temp;
+                            
+                            temp = effective[i];
+                            effective[i] = effective[j];
+                            effective[j] = temp;
+                            
+                            temp = shortage[i];
+                            shortage[i] = shortage[j];
+                            shortage[j] = temp;
+                            
+                            temp = status[i];
+                            status[i] = status[j];
+                            status[j] = temp;
+                        }
+                    }
+                }
+                
+                // Distribute remaining water
+                printf("Distributing extra %d litres by priority...\n", available);
+                for(i = 0; i < ZONES && available > 0; i++)
+                {
+                    int extra = req[i] - minReq[i];
+                    
+                    if(extra > 0)
+                    {
+                        if(available >= extra)
+                        {
+                            allocated[i] = allocated[i] + extra;
+                            effective[i] = allocated[i] - (allocated[i] * loss[i] / 100);
+                            shortage[i] = req[i] - effective[i];
+                            status[i] = 1;
+                            available = available - extra;
+                            printf("Z0%d got full\n", id[i]);
+                        }
+                        else
+                        {
+                            allocated[i] = allocated[i] + available;
+                            effective[i] = allocated[i] - (allocated[i] * loss[i] / 100);
+                            shortage[i] = req[i] - effective[i];
+                            available = 0;
+                            printf("Z0%d got partial extra\n", id[i]);
+                        }
+                    }
+                }
+            }
+            
+            // CASE 3: Not enough for minimum
+            else
+            {
+                printf("NOT ENOUGH WATER FOR MINIMUM!\n");
+                printf("Available: %d, Minimum Required: %d\n", available, totalMin);
+                
+                // Calculate priority scores
+                for(i = 0; i < ZONES; i++)
+                {
+                    priority[i] = 0;
+                    
+                    if(type[i] == 1 || type[i] == 4)
+                        priority[i] = priority[i] + 50;
+                    else if(type[i] == 2)
+                        priority[i] = priority[i] + 30;
+                    else
+                        priority[i] = priority[i] + 10;
+                    
+                    priority[i] = priority[i] + (wait[i] * 5);
+                }
+                
+                // Sort by priority
+                for(i = 0; i < ZONES - 1; i++)
+                {
+                    for(j = i + 1; j < ZONES; j++)
+                    {
+                        if(priority[j] > priority[i])
+                        {
+                            temp = priority[i];
+                            priority[i] = priority[j];
+                            priority[j] = temp;
+                            
+                            temp = id[i];
+                            id[i] = id[j];
+                            id[j] = temp;
+                            
+                            temp = type[i];
+                            type[i] = type[j];
+                            type[j] = temp;
+                            
+                            temp = req[i];
+                            req[i] = req[j];
+                            req[j] = temp;
+                            
+                            temp = minReq[i];
+                            minReq[i] = minReq[j];
+                            minReq[j] = temp;
+                            
+                            temp = loss[i];
+                            loss[i] = loss[j];
+                            loss[j] = temp;
+                            
+                            temp = wait[i];
+                            wait[i] = wait[j];
+                            wait[j] = temp;
+                            
+                            temp = allocated[i];
+                            allocated[i] = allocated[j];
+                            allocated[j] = temp;
+                            
+                            temp = effective[i];
+                            effective[i] = effective[j];
+                            effective[j] = temp;
+                            
+                            temp = shortage[i];
+                            shortage[i] = shortage[j];
+                            shortage[j] = temp;
+                            
+                            temp = status[i];
+                            status[i] = status[j];
+                            status[j] = temp;
+                        }
+                    }
+                }
+                
+                // Distribute by priority
+                printf("Distributing by priority...\n");
+                for(i = 0; i < ZONES && available > 0; i++)
+                {
+                    if(available >= minReq[i])
+                    {
+                        allocated[i] = minReq[i];
+                        effective[i] = allocated[i] - (allocated[i] * loss[i] / 100);
+                        shortage[i] = req[i] - effective[i];
+                        status[i] = 2;
+                        available = available - minReq[i];
+                        printf("Z0%d got minimum\n", id[i]);
+                    }
+                    else if(available > 0)
+                    {
+                        allocated[i] = available;
+                        effective[i] = allocated[i] - (allocated[i] * loss[i] / 100);
+                        shortage[i] = req[i] - effective[i];
+                        status[i] = 3;
+                        printf("Z0%d got partial (%d litres)\n", id[i], available);
+                        available = 0;
+                    }
+                    else
+                    {
+                        allocated[i] = 0;
+                        effective[i] = 0;
+                        shortage[i] = req[i];
+                        status[i] = 4;
+                        printf("Z0%d got nothing\n", id[i]);
+                    }
+                }
+            }
+            
+            printf("\nAllocation complete!\n");
+        }
+        
+        else if(choice == 3)
+        {
+            printf("\n===== RESULTS =====\n");
+            
+            int totalAlloc = 0;
+            int totalEff = 0;
+            int totalShort = 0;
+            int fullCount = 0, minCount = 0, belowCount = 0, unservedCount = 0;
+            
+            for(i = 0; i < ZONES; i++)
+            {
+                printf("\nZ0%d: ", id[i]);
+                
+                if(type[i] == 1)
+                    printf("Hospital ");
+                else if(type[i] == 2)
+                    printf("Shelter  ");
+                else if(type[i] == 3)
+                    printf("Resident ");
+                else
+                    printf("Service  ");
+                
+                printf("Req:%d Min:%d Alloc:%d Eff:%d Short:%d ",
+                       req[i], minReq[i], allocated[i], effective[i], shortage[i]);
+                
+                if(status[i] == 1)
+                {
+                    printf("Status:FULL");
+                    fullCount = fullCount + 1;
+                }
+                else if(status[i] == 2)
+                {
+                    printf("Status:MINIMUM");
+                    minCount = minCount + 1;
+                }
+                else if(status[i] == 3)
+                {
+                    printf("Status:BELOW MIN");
+                    belowCount = belowCount + 1;
+                }
+                else
+                {
+                    printf("Status:UNSERVED");
+                    unservedCount = unservedCount + 1;
+                }
+                
+                totalAlloc = totalAlloc + allocated[i];
+                totalEff = totalEff + effective[i];
+                totalShort = totalShort + shortage[i];
+            }
+            
+            printf("\n\n=== SUMMARY ===\n");
+            printf("Total Allocated: %d\n", totalAlloc);
+            printf("Total Effective: %d\n", totalEff);
+            printf("Total Shortage: %d\n", totalShort);
+            printf("Remaining Water: %d\n", available);
+            printf("\nFULL: %d, MINIMUM: %d, BELOW MIN: %d, UNSERVED: %d\n",
+                   fullCount, minCount, belowCount, unservedCount);
+        }
+        
+        else if(choice == 4)
+        {
+            printf("\nEnter zone code (1-6): ");
+            scanf("%d", &code);
+            
+            found = 0;
+            for(i = 0; i < ZONES; i++)
+            {
+                if(id[i] == code)
+                {
+                    found = 1;
+                    printf("\n=== ZONE FOUND ===\n");
+                    printf("Zone: Z0%d\n", id[i]);
+                    
+                    if(type[i] == 1)
+                        printf("Type: Hospital\n");
+                    else if(type[i] == 2)
+                        printf("Type: Shelter\n");
+                    else if(type[i] == 3)
+                        printf("Type: Residential\n");
+                    else
+                        printf("Type: Emergency Service\n");
+                    
+                    printf("Requested: %d\n", req[i]);
+                    printf("Minimum: %d\n", minReq[i]);
+                    printf("Loss: %d%%\n", loss[i]);
+                    printf("Waiting: %d\n", wait[i]);
+                    printf("Allocated: %d\n", allocated[i]);
+                    printf("Effective: %d\n", effective[i]);
+                    printf("Shortage: %d\n", shortage[i]);
+                    
+                    if(status[i] == 1)
+                        printf("Status: FULL\n");
+                    else if(status[i] == 2)
+                        printf("Status: MINIMUM\n");
+                    else if(status[i] == 3)
+                        printf("Status: BELOW MINIMUM\n");
+                    else
+                        printf("Status: UNSERVED\n");
+                }
+            }
+            
+            if(found == 0)
+                printf("Zone not found!\n");
+        }
+        
+        else if(choice == 5)
+        {
+            printf("\nEnter new water amount: ");
+            scanf("%d", &available);
+            
+            if(available >= 0)
+                printf("Updated to %d litres\n", available);
+            else
+                printf("Invalid amount!\n");
+        }
+        
+        else if(choice == 6)
+        {
+            printf("\nExiting... Thank you!\n");
+        }
+        
+        else
+        {
+            printf("Invalid choice!\n");
+        }
+        
+    } while(choice != 6);
     
     return 0;
-}
-
-// Function to calculate priority
-void calculatePriority(char zoneID[][4], char serviceType[][30], int requested[], 
-                      int minimum[], int lossPercent[], int waitingCycles[], 
-                      int priority[], int availableWater) {
-    int i, j;
-    int priorityScore[MAX_ZONES];
-    int tempScore;
-    char tempID[4];
-    char tempService[30];
-    int tempRequested, tempMinimum, tempLoss, tempWaiting, tempPriority;
-    
-    // Calculate priority scores
-    for(i = 0; i < MAX_ZONES; i++) {
-        priorityScore[i] = 0;
-        
-        // Check service type for emergency priority
-        if(serviceType[i][0] == 'M' || serviceType[i][0] == 'F') {
-            priorityScore[i] += 50;
-        }
-        
-        // Check for shelter
-        if(serviceType[i][0] == 'C' || serviceType[i][0] == 'S') {
-            priorityScore[i] += 30;
-        }
-        
-        // Add waiting cycles priority
-        priorityScore[i] += waitingCycles[i] * 15;
-        
-        // Add efficiency factor (lower loss = higher priority)
-        priorityScore[i] += (20 - lossPercent[i]);
-        
-        // Add need factor
-        if(requested[i] / minimum[i] > 2) {
-            priorityScore[i] += 10;
-        }
-    }
-    
-    // Sort by priority using bubble sort (descending)
-    for(i = 0; i < MAX_ZONES - 1; i++) {
-        for(j = 0; j < MAX_ZONES - i - 1; j++) {
-            if(priorityScore[j] < priorityScore[j + 1]) {
-                // Swap priority scores
-                tempScore = priorityScore[j];
-                priorityScore[j] = priorityScore[j + 1];
-                priorityScore[j + 1] = tempScore;
-                
-                // Swap zone ID
-                for(int k = 0; k < 4; k++) {
-                    tempID[k] = zoneID[j][k];
-                    zoneID[j][k] = zoneID[j + 1][k];
-                    zoneID[j + 1][k] = tempID[k];
-                }
-                
-                // Swap service type
-                for(int k = 0; k < 30; k++) {
-                    tempService[k] = serviceType[j][k];
-                    serviceType[j][k] = serviceType[j + 1][k];
-                    serviceType[j + 1][k] = tempService[k];
-                }
-                
-                // Swap other attributes
-                tempRequested = requested[j];
-                requested[j] = requested[j + 1];
-                requested[j + 1] = tempRequested;
-                
-                tempMinimum = minimum[j];
-                minimum[j] = minimum[j + 1];
-                minimum[j + 1] = tempMinimum;
-                
-                tempLoss = lossPercent[j];
-                lossPercent[j] = lossPercent[j + 1];
-                lossPercent[j + 1] = tempLoss;
-                
-                tempWaiting = waitingCycles[j];
-                waitingCycles[j] = waitingCycles[j + 1];
-                waitingCycles[j + 1] = tempWaiting;
-            }
-        }
-    }
-    
-    // Assign priority numbers
-    for(i = 0; i < MAX_ZONES; i++) {
-        priority[i] = i + 1;
-    }
-    
-    printf("\nPriority assigned based on:\n");
-    printf("- Emergency service type\n");
-    printf("- Waiting cycles\n");
-    printf("- Distribution efficiency\n");
-    printf("- Need urgency\n");
-}
-
-// Function to allocate water
-void allocateWater(char zoneID[][4], char serviceType[][30], int requested[], 
-                  int minimum[], int lossPercent[], int waitingCycles[], 
-                  int priority[], int allocated[], int effectiveDelivered[], 
-                  int shortage[], char serviceCondition[][25], int *availableWater) {
-    int i;
-    int totalMinimum = 0;
-    int totalRequested = 0;
-    
-    // Calculate totals
-    for(i = 0; i < MAX_ZONES; i++) {
-        totalMinimum += minimum[i];
-        totalRequested += requested[i];
-    }
-    
-    // Case 1: Sufficient water for all
-    if(*availableWater >= totalRequested) {
-        for(i = 0; i < MAX_ZONES; i++) {
-            allocated[i] = requested[i];
-            effectiveDelivered[i] = allocated[i] * (100 - lossPercent[i]) / 100;
-            shortage[i] = 0;
-            // Set service condition
-            for(int j = 0; j < 25; j++) {
-                serviceCondition[i][j] = '\0';
-            }
-            char *cond = "Fully Satisfied";
-            for(int j = 0; cond[j] != '\0'; j++) {
-                serviceCondition[i][j] = cond[j];
-            }
-        }
-        return;
-    }
-    
-    // Case 2: Enough for minimums but not all
-    if(*availableWater >= totalMinimum) {
-        // Allocate minimum to all
-        for(i = 0; i < MAX_ZONES; i++) {
-            allocated[i] = minimum[i];
-            *availableWater -= minimum[i];
-        }
-        
-        // Distribute remaining
-        for(i = 0; i < MAX_ZONES; i++) {
-            int remaining = requested[i] - minimum[i];
-            if(remaining > 0 && *availableWater > 0) {
-                if(*availableWater >= remaining) {
-                    allocated[i] += remaining;
-                    *availableWater -= remaining;
-                } else {
-                    allocated[i] += *availableWater;
-                    *availableWater = 0;
-                }
-            }
-        }
-        
-        // Calculate delivery and shortage
-        for(i = 0; i < MAX_ZONES; i++) {
-            effectiveDelivered[i] = allocated[i] * (100 - lossPercent[i]) / 100;
-            shortage[i] = requested[i] - allocated[i];
-            
-            // Set service condition
-            for(int j = 0; j < 25; j++) {
-                serviceCondition[i][j] = '\0';
-            }
-            
-            if(shortage[i] == 0) {
-                char *cond = "Fully Satisfied";
-                for(int j = 0; cond[j] != '\0'; j++) {
-                    serviceCondition[i][j] = cond[j];
-                }
-            } else if(effectiveDelivered[i] >= minimum[i]) {
-                char *cond = "Minimum Satisfied";
-                for(int j = 0; cond[j] != '\0'; j++) {
-                    serviceCondition[i][j] = cond[j];
-                }
-            } else {
-                char *cond = "Below Minimum";
-                for(int j = 0; cond[j] != '\0'; j++) {
-                    serviceCondition[i][j] = cond[j];
-                }
-            }
-        }
-        return;
-    }
-    
-    // Case 3: Not enough for minimums
-    if(*availableWater < totalMinimum) {
-        for(i = 0; i < MAX_ZONES; i++) {
-            if(*availableWater > 0) {
-                // Priority for emergency services
-                if(serviceType[i][0] == 'M' || serviceType[i][0] == 'F') {
-                    if(*availableWater >= minimum[i]) {
-                        allocated[i] = minimum[i];
-                        *availableWater -= minimum[i];
-                    } else {
-                        allocated[i] = *availableWater;
-                        *availableWater = 0;
-                    }
-                } else if(serviceType[i][0] == 'C' || serviceType[i][0] == 'S') {
-                    int shelterAlloc = minimum[i] * 6 / 10;
-                    if(*availableWater >= shelterAlloc) {
-                        allocated[i] = shelterAlloc;
-                        *availableWater -= shelterAlloc;
-                    } else {
-                        allocated[i] = *availableWater;
-                        *availableWater = 0;
-                    }
-                } else {
-                    int residentialAlloc = minimum[i] * 4 / 10;
-                    if(*availableWater >= residentialAlloc) {
-                        allocated[i] = residentialAlloc;
-                        *availableWater -= residentialAlloc;
-                    } else {
-                        allocated[i] = *availableWater;
-                        *availableWater = 0;
-                    }
-                }
-            } else {
-                allocated[i] = 0;
-            }
-            
-            effectiveDelivered[i] = allocated[i] * (100 - lossPercent[i]) / 100;
-            shortage[i] = requested[i] - allocated[i];
-            
-            // Set service condition
-            for(int j = 0; j < 25; j++) {
-                serviceCondition[i][j] = '\0';
-            }
-            
-            if(allocated[i] == 0) {
-                char *cond = "Unserved";
-                for(int j = 0; cond[j] != '\0'; j++) {
-                    serviceCondition[i][j] = cond[j];
-                }
-            } else if(effectiveDelivered[i] >= minimum[i]) {
-                char *cond = "Minimum Satisfied";
-                for(int j = 0; cond[j] != '\0'; j++) {
-                    serviceCondition[i][j] = cond[j];
-                }
-            } else {
-                char *cond = "Below Minimum";
-                for(int j = 0; cond[j] != '\0'; j++) {
-                    serviceCondition[i][j] = cond[j];
-                }
-            }
-        }
-    }
-}
-
-// Function to search for a zone
-void searchZone(char zoneID[][4], char serviceType[][30], int requested[], 
-               int minimum[], int lossPercent[], int waitingCycles[], 
-               int priority[], int allocated[], int effectiveDelivered[], 
-               int shortage[], char serviceCondition[][25]) {
-    char searchId[4];
-    int i, found = 0;
-    
-    printf("Enter Zone ID to search (e.g., Z01): ");
-    scanf("%s", searchId);
-    
-    for(i = 0; i < MAX_ZONES; i++) {
-        // Compare zone IDs
-        int match = 1;
-        for(int j = 0; j < 4; j++) {
-            if(zoneID[i][j] != searchId[j]) {
-                match = 0;
-                break;
-            }
-        }
-        
-        if(match) {
-            printf("\n=== Zone Information ===\n");
-            printf("ID: %s\n", zoneID[i]);
-            printf("Service Type: %s\n", serviceType[i]);
-            printf("Requested: %d L\n", requested[i]);
-            printf("Minimum: %d L\n", minimum[i]);
-            printf("Loss: %d%%\n", lossPercent[i]);
-            printf("Waiting Cycles: %d\n", waitingCycles[i]);
-            printf("Priority: %d\n", priority[i]);
-            printf("Allocated: %d L\n", allocated[i]);
-            printf("Effective Delivered: %d L\n", effectiveDelivered[i]);
-            printf("Shortage: %d L\n", shortage[i]);
-            printf("Service Condition: %s\n", serviceCondition[i]);
-            found = 1;
-            break;
-        }
-    }
-    
-    if(!found) {
-        printf("Zone not found!\n");
-    }
-}
-
-// Function to sort by service condition
-void sortByServiceCondition(char zoneID[][4], char serviceType[][30], int requested[], 
-                           int minimum[], int priority[], int allocated[], 
-                           int effectiveDelivered[], int shortage[], 
-                           char serviceCondition[][25]) {
-    int i, j;
-    int order[MAX_ZONES];
-    char tempID[4], tempService[30], tempCondition[25];
-    int tempRequested, tempMinimum, tempPriority, tempAllocated, tempEffective, tempShortage;
-    
-    // Assign order values
-    for(i = 0; i < MAX_ZONES; i++) {
-        if(serviceCondition[i][0] == 'F') order[i] = 1;
-        else if(serviceCondition[i][0] == 'M') order[i] = 2;
-        else if(serviceCondition[i][0] == 'B') order[i] = 3;
-        else if(serviceCondition[i][0] == 'U') order[i] = 4;
-        else order[i] = 5;
-    }
-    
-    // Bubble sort
-    for(i = 0; i < MAX_ZONES - 1; i++) {
-        for(j = 0; j < MAX_ZONES - i - 1; j++) {
-            if(order[j] > order[j + 1]) {
-                // Swap order
-                int tempOrder = order[j];
-                order[j] = order[j + 1];
-                order[j + 1] = tempOrder;
-                
-                // Swap ID
-                for(int k = 0; k < 4; k++) {
-                    tempID[k] = zoneID[j][k];
-                    zoneID[j][k] = zoneID[j + 1][k];
-                    zoneID[j + 1][k] = tempID[k];
-                }
-                
-                // Swap service type
-                for(int k = 0; k < 30; k++) {
-                    tempService[k] = serviceType[j][k];
-                    serviceType[j][k] = serviceType[j + 1][k];
-                    serviceType[j + 1][k] = tempService[k];
-                }
-                
-                // Swap condition
-                for(int k = 0; k < 25; k++) {
-                    tempCondition[k] = serviceCondition[j][k];
-                    serviceCondition[j][k] = serviceCondition[j + 1][k];
-                    serviceCondition[j + 1][k] = tempCondition[k];
-                }
-                
-                // Swap numeric values
-                tempRequested = requested[j];
-                requested[j] = requested[j + 1];
-                requested[j + 1] = tempRequested;
-                
-                tempMinimum = minimum[j];
-                minimum[j] = minimum[j + 1];
-                minimum[j + 1] = tempMinimum;
-                
-                tempPriority = priority[j];
-                priority[j] = priority[j + 1];
-                priority[j + 1] = tempPriority;
-                
-                tempAllocated = allocated[j];
-                allocated[j] = allocated[j + 1];
-                allocated[j + 1] = tempAllocated;
-                
-                tempEffective = effectiveDelivered[j];
-                effectiveDelivered[j] = effectiveDelivered[j + 1];
-                effectiveDelivered[j + 1] = tempEffective;
-                
-                tempShortage = shortage[j];
-                shortage[j] = shortage[j + 1];
-                shortage[j + 1] = tempShortage;
-            }
-        }
-    }
-    
-    printf("\nZones sorted by Service Condition:\n");
-    for(i = 0; i < MAX_ZONES; i++) {
-        printf("%s: %s\n", zoneID[i], serviceCondition[i]);
-    }
-}
-
-// Function to find zone with highest shortage
-void findHighestShortage(char zoneID[][4], char serviceType[][30], 
-                        int shortage[], char serviceCondition[][25]) {
-    int i;
-    int maxShortage = 0;
-    int maxIndex = 0;
-    
-    for(i = 0; i < MAX_ZONES; i++) {
-        if(shortage[i] > maxShortage) {
-            maxShortage = shortage[i];
-            maxIndex = i;
-        }
-    }
-    
-    printf("\n=== Zone with Highest Shortage ===\n");
-    printf("Zone ID: %s\n", zoneID[maxIndex]);
-    printf("Service Type: %s\n", serviceType[maxIndex]);
-    printf("Shortage: %d L\n", shortage[maxIndex]);
-    printf("Service Condition: %s\n", serviceCondition[maxIndex]);
-}
-
-// Function to display summary
-void displaySummary(char zoneID[][4], char serviceType[][30], int requested[], 
-                   int minimum[], int priority[], int allocated[], 
-                   int effectiveDelivered[], int shortage[], 
-                   char serviceCondition[][25], int availableWater) {
-    int i;
-    int totalAllocated = 0;
-    int totalEffective = 0;
-    int totalShortage = 0;
-    int fullySatisfied = 0, minSatisfied = 0, belowMin = 0, unserved = 0;
-    
-    // Calculate totals
-    for(i = 0; i < MAX_ZONES; i++) {
-        totalAllocated += allocated[i];
-        totalEffective += effectiveDelivered[i];
-        totalShortage += shortage[i];
-        
-        if(serviceCondition[i][0] == 'F') fullySatisfied++;
-        else if(serviceCondition[i][0] == 'M') minSatisfied++;
-        else if(serviceCondition[i][0] == 'B') belowMin++;
-        else if(serviceCondition[i][0] == 'U') unserved++;
-    }
-    
-    printf("\n========== WATER ALLOCATION SUMMARY ==========\n");
-    printf("\n%-6s %-30s %-12s %-12s %-10s %-12s %-12s %-12s %-15s\n", 
-           "Zone", "Service Type", "Requested", "Minimum", "Priority", 
-           "Allocated", "Effective", "Shortage", "Condition");
-    printf("--------------------------------------------------------------------------------------------------------\n");
-    
-    for(i = 0; i < MAX_ZONES; i++) {
-        printf("%-6s %-30s %-12d %-12d %-10d %-12d %-12d %-12d %-15s\n",
-               zoneID[i],
-               serviceType[i],
-               requested[i],
-               minimum[i],
-               priority[i],
-               allocated[i],
-               effectiveDelivered[i],
-               shortage[i],
-               serviceCondition[i]);
-    }
-    
-    printf("\n========== TOTALS ==========\n");
-    printf("Total Water Requested: %d L\n", 4000 + 3500 + 4500 + 3800 + 2600 + 2000);
-    printf("Total Water Allocated: %d L\n", totalAllocated);
-    printf("Total Effective Delivered: %d L\n", totalEffective);
-    printf("Total Shortage: %d L\n", totalShortage);
-    printf("Remaining Water: %d L\n", availableWater - totalAllocated);
-    printf("\nService Condition Summary:\n");
-    printf("  Fully Satisfied: %d zones\n", fullySatisfied);
-    printf("  Minimum Satisfied: %d zones\n", minSatisfied);
-    printf("  Below Minimum: %d zones\n", belowMin);
-    printf("  Unserved: %d zones\n", unserved);
 }
